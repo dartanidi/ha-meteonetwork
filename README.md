@@ -6,7 +6,7 @@
 [![GitHub Activity][commits-shield]][commits]
 [![License][license-shield]](LICENSE)
 
-![Project Maintenance][maintenance-shield]
+#![Project Maintenance][maintenance-shield]
 
 A Home Assistant custom component to integrate Meteonetwork weather stations.
 
