@@ -1,0 +1,9 @@
+# services.yaml
+# Servizi opzionali per il component
+
+update_data:
+  name: Aggiorna Dati Meteonetwork
+  description: Forza l'aggiornamento dei dati dalla stazione
+  target:
+    entity:
+      integration: meteonetwork

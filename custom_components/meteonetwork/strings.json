@@ -1,0 +1,52 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configura Meteonetwork",
+        "description": "Inserisci le credenziali per la tua stazione Meteonetwork.\n\nIntervallo di polling: {scan_interval_range}",
+        "data": {
+          "station_code": "Codice Stazione",
+          "api_key": "Token API",
+          "scan_interval": "Intervallo di Polling (minuti)"
+        },
+        "data_description": {
+          "station_code": "Il codice identificativo della tua stazione Meteonetwork",
+          "api_key": "Il token API fornito da Meteonetwork per accedere ai dati",
+          "scan_interval": "Frequenza di aggiornamento dei dati in minuti"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Impossibile connettersi all'API Meteonetwork. Verifica la connessione internet.",
+      "invalid_auth": "Token API non valido. Verifica le tue credenziali.",
+      "station_not_found": "Codice stazione non trovato. Verifica il codice inserito.",
+      "timeout": "Timeout durante la connessione all'API.",
+      "no_data": "La stazione non ha restituito dati validi.",
+      "unknown": "Errore sconosciuto durante la configurazione."
+    },
+    "abort": {
+      "already_configured": "Questa stazione è già configurata nel sistema."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opzioni Meteonetwork",
+        "description": "Modifica le impostazioni della tua stazione Meteonetwork.\n\nIntervallo di polling consentito: {scan_interval_range}",
+        "data": {
+          "scan_interval": "Intervallo di Polling (minuti)"
+        },
+        "data_description": {
+          "scan_interval": "Frequenza di aggiornamento dei dati in minuti. Valori bassi potrebbero sovraccaricare l'API."
+        }
+      }
+    }
+  },
+  "system_health": {
+    "info": {
+      "api_endpoint_reachable": "API Endpoint raggiungibile",
+      "station_code": "Codice Stazione",
+      "scan_interval": "Intervallo di Polling"
+    }
+  }
+}
