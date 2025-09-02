@@ -46,7 +46,7 @@ A Home Assistant custom component to integrate Meteonetwork weather stations.
 2. Click **Add Integration**
 3. Search for "**Meteonetwork**"
 4. Enter your:
-   - **Station Code** (e.g., "IEMR0001")
+   - **Station Code** (e.g., "ero123")
    - **API Token** (from your Meteonetwork account)  
    - **Polling Interval** (1-60 minutes, default: 5)
 5. Click **Submit**
@@ -100,9 +100,9 @@ You can modify these settings after installation:
 
 ## Support
 
-- 🐛 [Report bugs](https://github.com/yourusername/ha-meteonetwork/issues)
-- 💡 [Request features](https://github.com/yourusername/ha-meteonetwork/issues)
-- 💬 [Discussions](https://github.com/yourusername/ha-meteonetwork/discussions)
+- 🐛 [Report bugs](https://github.com/dartanidi/ha-meteonetwork/issues)
+- 💡 [Request features](https://github.com/dartanidi/ha-meteonetwork/issues)
+- 💬 [Discussions](https://github.com/dartanidi/ha-meteonetwork/discussions)
 
 ## Contributing
 
