@@ -51,9 +51,8 @@ A Home Assistant custom component to integrate Meteonetwork weather stations.
 
 ### Getting Your Credentials
 
-1. Register at [Meteonetwork.it](https://www.meteonetwork.it/)
-2. Find your station code in your dashboard
-3. Generate an API token in your account settings
+1. Register and get a free token at [Meteonetwork.it]([https://www.meteonetwork.it/](https://www.meteonetwork.it/supporto/meteonetwork-api/))
+2. Find your station code in the [weather stations map](https://www.meteonetwork.it/rete/livemap/)
 
 ## Sensors Created
 
