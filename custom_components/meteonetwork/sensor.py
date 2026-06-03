@@ -141,31 +141,24 @@ class MeteonetworkDataUpdateCoordinator(DataUpdateCoordinator):
 
     def __init__(
         self,
-        coordinator: MeteonetworkDataUpdateCoordinator,
-        sensor_type: str,
-        entry: ConfigEntry,
+        hass: HomeAssistant,
+        session: aiohttp.ClientSession,
+        api_key: str,
+        station_code: str,
+        scan_interval: timedelta,
     ) -> None:
-        """Initialize the sensor."""
-        super().__init__(coordinator)
-        
-        self._sensor_type = sensor_type
-        self._sensor_config = SENSOR_TYPES[sensor_type]
-        self._entry = entry
-        
-        # --- MODIFICA 1: Attiva il naming moderno ---
-        self._attr_has_entity_name = True
-        
-        # --- MODIFICA 2: Rendi il nome dell'entità relativo al dispositivo ---
-        # Avendo has_entity_name = True, l'entity_id finale sarà composto da:
-        # "meteonetwork" (il DOMAIN) + "chiave_sensore" oppure dal nome abbreviato.
-        # Per avere sensor.meteonetwork_temperatura conviene impostarlo così:
-        self._attr_name = self._sensor_config['name'] 
-        
-        self._attr_unique_id = f"{entry.data[CONF_STATION_CODE]}_{sensor_type}"
-        self._attr_device_class = self._sensor_config.get("device_class")
-        self._attr_state_class = self._sensor_config.get("state_class")
-        self._attr_native_unit_of_measurement = self._sensor_config.get("unit")
-        self._attr_icon = self._sensor_config.get("icon")
+        """Initialize."""
+        self.api_key = api_key
+        self.station_code = station_code
+        self.session = session
+        self.api_url = f"https://api.meteonetwork.it/v3/data-realtime/{station_code}"
+
+        super().__init__(
+            hass,
+            _LOGGER,
+            name=DOMAIN,
+            update_interval=scan_interval,
+        )
         
     async def _async_update_data(self) -> Dict[str, Any]:
         """Update data via library."""
@@ -241,8 +234,10 @@ class MeteonetworkSensor(CoordinatorEntity, SensorEntity):
         self._sensor_config = SENSOR_TYPES[sensor_type]
         self._entry = entry
         
-        # Entity attributes
-        self._attr_name = f"Meteonetwork {self._sensor_config['name']}"
+        # --- FIX DENOMINAZIONE PULITA (sensor.meteonetwork_xxxx) ---
+        self._attr_has_entity_name = True
+        self._attr_name = self._sensor_config['name'] 
+        
         self._attr_unique_id = f"{entry.data[CONF_STATION_CODE]}_{sensor_type}"
         self._attr_device_class = self._sensor_config.get("device_class")
         self._attr_state_class = self._sensor_config.get("state_class")
