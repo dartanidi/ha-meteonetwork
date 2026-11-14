@@ -4,16 +4,18 @@
 [![GitHub Release][releases-shield]][releases]
 [![License][license-shield]](LICENSE)
 
-A Home Assistant custom component to integrate Meteonetwork weather stations.
+A Home Assistant custom component to integrate Meteonetwork weather stations with automatic fallback support.
 
 ## Features
 
 - ⭐ Real-time weather data from your Meteonetwork station
+- 🔄 **Automatic Fallback Station**: seamless switch to a backup station if your primary station goes offline, returns empty data, or has stale readings
 - 🌡️ Temperature, humidity, pressure sensors
 - 💨 Wind speed, cardinal direction, and gusts
 - 🌧️ Rain data (daily total and current precipitation rate)
-- ⚙️ Configurable polling interval (1-60 minutes)
-- 🎛️ Easy setup through Home Assistant UI
+- 📡 Active station status monitor & problem binary sensor
+- ⚙️ Configurable polling interval (1-60 minutes) and staleness threshold (15-360 minutes)
+- 🎛️ Easy setup and options through Home Assistant UI
 - 🔄 Automatic updates via Home Assistant Marketplace / HACS
 
 ## Installation
@@ -53,9 +55,11 @@ A Home Assistant custom component to integrate Meteonetwork weather stations.
 2. Click **Add Integration**
 3. Search for "**Meteonetwork**"
 4. Enter your:
-   - **Station Code** (e.g., "lmb015")
-   - **API Token** (from your Meteonetwork account)  
-   - **Polling Interval** (1-60 minutes, default: 5)
+   - **Station Code**: Primary station (e.g., "lmb015")
+   - **API Token**: Personal API token from Meteonetwork
+   - **Fallback Station Code** *(Optional)*: Backup station (e.g., "lmb254")
+   - **Polling Interval**: Update frequency (1-60 minutes, default: 5)
+   - **Stale Threshold**: Minutes of inactivity before considering primary station offline (15-360 minutes, default: 60)
 5. Click **Submit**
 
 ### Getting Your Credentials
@@ -63,9 +67,9 @@ A Home Assistant custom component to integrate Meteonetwork weather stations.
 1. Register and get a free API token at [Meteonetwork.it](https://www.meteonetwork.it/supporto/meteonetwork-api/)
 2. Find your station code in the [weather stations map](https://www.meteonetwork.it/rete/livemap/)
 
-## Sensors Created
+## Entities Created
 
-The integration creates these 11 sensors for your station:
+### Weather Sensors
 
 | Sensor | Description | Unit |
 |--------|-------------|------|
@@ -81,11 +85,20 @@ The integration creates these 11 sensors for your station:
 | `sensor.meteonetwork_intensita_pioggia` | Rain rate | mm/h |
 | `sensor.meteonetwork_punto_di_rugiada` | Dew point | °C |
 
+### Monitoring & Fallback Sensors
+
+| Entity | Type | Description |
+|--------|------|-------------|
+| `sensor.meteonetwork_stazione_attiva` | Sensor | Indicates whether the primary or fallback station is active (e.g. `Principale: Bologna (LMB015)`) |
+| `binary_sensor.meteonetwork_fallback_attivo` | Binary Sensor (Problem) | Turns `ON` when the fallback station is in use, `OFF` when the primary station is working normally |
+
 ## Options
 
-You can modify these settings after installation:
+You can modify these settings anytime after installation from **Settings** → **Devices & Services** → **Meteonetwork** → **Configure**:
 
-- **Polling Interval**: How often to update data (1-60 minutes) directly from the integration Options menu.
+- **Fallback Station Code**: Add, change, or remove the backup station
+- **Polling Interval**: How often to fetch data (1-60 minutes)
+- **Stale Threshold**: Minutes without new data after which the primary station is marked offline (15-360 minutes)
 
 ## Troubleshooting
 
@@ -96,7 +109,7 @@ You can modify these settings after installation:
 
 ### Configuration errors
 - Verify your API token is valid
-- Check that the station code exists
+- Check that both primary and fallback station codes exist on Meteonetwork
 - Ensure internet connectivity
 
 ### API errors

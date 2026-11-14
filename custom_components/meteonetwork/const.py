@@ -3,6 +3,8 @@ from datetime import timedelta
 
 DOMAIN = "meteonetwork"
 CONF_STATION_CODE = "station_code"
+CONF_FALLBACK_STATION_CODE = "fallback_station_code"
+CONF_STALE_THRESHOLD = "stale_threshold"
 
 # API Configuration
 API_BASE_URL = "https://api.meteonetwork.it/v3/data-realtime"
@@ -13,6 +15,11 @@ DEFAULT_SCAN_INTERVAL = 5
 MIN_SCAN_INTERVAL = 1
 MAX_SCAN_INTERVAL = 60
 DEFAULT_SCAN_INTERVAL_TIMEDELTA = timedelta(minutes=DEFAULT_SCAN_INTERVAL)
+
+# Staleness defaults and limits (in minutes)
+DEFAULT_STALE_THRESHOLD_MINUTES = 60
+MIN_STALE_THRESHOLD_MINUTES = 15
+MAX_STALE_THRESHOLD_MINUTES = 360
 
 # Mapping of internal sensor types to API response keys
 SENSOR_KEY_MAP = {

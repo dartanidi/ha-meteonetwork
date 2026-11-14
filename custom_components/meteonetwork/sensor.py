@@ -120,10 +120,12 @@ async def async_setup_entry(
     """Set up sensors from a config entry created in the integrations UI."""
     coordinator: MeteonetworkDataUpdateCoordinator = entry.runtime_data
 
-    sensors = [
+    sensors: list[SensorEntity] = [
         MeteonetworkSensor(coordinator, sensor_type, entry)
         for sensor_type in SENSOR_TYPES
     ]
+    # Sensore per identificare quale stazione sta trasmettendo i dati
+    sensors.append(MeteonetworkActiveStationSensor(coordinator, entry))
 
     async_add_entities(sensors, update_before_add=False)
 
@@ -189,3 +191,67 @@ class MeteonetworkSensor(CoordinatorEntity[MeteonetworkDataUpdateCoordinator], S
             return float(value)
         except (ValueError, TypeError):
             return None
+
+
+class MeteonetworkActiveStationSensor(CoordinatorEntity[MeteonetworkDataUpdateCoordinator], SensorEntity):
+    """Sensor indicating the currently active Meteonetwork station."""
+
+    def __init__(
+        self,
+        coordinator: MeteonetworkDataUpdateCoordinator,
+        entry: ConfigEntry,
+    ) -> None:
+        """Initialize the active station sensor."""
+        super().__init__(coordinator)
+        self._entry = entry
+
+        self._attr_has_entity_name = True
+        self._attr_name = "Stazione Attiva"
+        self._attr_suggested_object_id = "meteonetwork_stazione_attiva"
+        self._attr_unique_id = f"{entry.data[CONF_STATION_CODE]}_active_station"
+        self._attr_icon = "mdi:broadcast"
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return device information."""
+        station_name = "Unknown"
+        if self.coordinator.data and isinstance(self.coordinator.data, dict):
+            station_name = self.coordinator.data.get("place", "Unknown")
+
+        return DeviceInfo(
+            identifiers={(DOMAIN, self._entry.data[CONF_STATION_CODE])},
+            name=f"Stazione Meteonetwork {station_name}",
+            manufacturer="Meteonetwork",
+            model="Weather Station",
+            configuration_url="https://www.meteonetwork.it/rete/livemap/",
+        )
+
+    @property
+    def native_value(self) -> str | None:
+        """Return the active station description."""
+        if not self.coordinator.data:
+            return None
+
+        is_fallback = self.coordinator.data.get("is_fallback", False)
+        station_code = self.coordinator.data.get("active_station_code", "").upper()
+        place = self.coordinator.data.get("place", "")
+
+        prefix = "Fallback" if is_fallback else "Principale"
+        if place:
+            return f"{prefix}: {place} ({station_code})"
+        return f"{prefix} ({station_code})"
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return state attributes about station status."""
+        if not self.coordinator.data:
+            return {}
+
+        return {
+            "codice_stazione_attiva": self.coordinator.data.get("active_station_code"),
+            "stazione_principale": self.coordinator.station_code,
+            "stazione_fallback": self.coordinator.fallback_station_code,
+            "is_fallback": self.coordinator.data.get("is_fallback", False),
+            "ultimo_aggiornamento": self.coordinator.data.get("observation_time_local")
+            or self.coordinator.data.get("observation_time_utc"),
+        }

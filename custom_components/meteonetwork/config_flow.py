@@ -25,11 +25,16 @@ from homeassistant.helpers.selector import (
 from .const import (
     API_BASE_URL,
     API_TIMEOUT,
+    CONF_FALLBACK_STATION_CODE,
+    CONF_STALE_THRESHOLD,
     CONF_STATION_CODE,
     DEFAULT_SCAN_INTERVAL,
+    DEFAULT_STALE_THRESHOLD_MINUTES,
     DOMAIN,
     MAX_SCAN_INTERVAL,
+    MAX_STALE_THRESHOLD_MINUTES,
     MIN_SCAN_INTERVAL,
+    MIN_STALE_THRESHOLD_MINUTES,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -40,11 +45,23 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
         vol.Required(CONF_API_KEY): TextSelector(
             TextSelectorConfig(type=TextSelectorType.PASSWORD)
         ),
+        vol.Optional(CONF_FALLBACK_STATION_CODE, default=""): str,
         vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): NumberSelector(
             NumberSelectorConfig(
                 min=MIN_SCAN_INTERVAL,
                 max=MAX_SCAN_INTERVAL,
                 step=1,
+                unit_of_measurement="min",
+                mode=NumberSelectorMode.BOX,
+            )
+        ),
+        vol.Optional(
+            CONF_STALE_THRESHOLD, default=DEFAULT_STALE_THRESHOLD_MINUTES
+        ): NumberSelector(
+            NumberSelectorConfig(
+                min=MIN_STALE_THRESHOLD_MINUTES,
+                max=MAX_STALE_THRESHOLD_MINUTES,
+                step=5,
                 unit_of_measurement="min",
                 mode=NumberSelectorMode.BOX,
             )
@@ -111,6 +128,10 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     hub = MeteonetworkHub(hass)
     station_code = data[CONF_STATION_CODE].strip().lower()
     api_key = data[CONF_API_KEY].strip()
+    fallback_station_code = data.get(CONF_FALLBACK_STATION_CODE, "").strip().lower()
+
+    if fallback_station_code and fallback_station_code == station_code:
+        raise SameStation
 
     result = await hub.authenticate(api_key, station_code)
 
@@ -124,6 +145,12 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         if result["error"] == "no_data":
             raise NoData
         raise CannotConnect("Impossibile connettersi all'API Meteonetwork")
+
+    # If fallback station was specified, validate it too
+    if fallback_station_code:
+        fallback_res = await hub.authenticate(api_key, fallback_station_code)
+        if not fallback_res["success"]:
+            raise FallbackStationNotFound
 
     return {
         "title": f"{result['station_name']} ({station_code.upper()})",
@@ -150,10 +177,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         station_code = user_input[CONF_STATION_CODE].strip().lower()
         api_key = user_input[CONF_API_KEY].strip()
+        fallback_station_code = user_input.get(CONF_FALLBACK_STATION_CODE, "").strip().lower()
         scan_interval = user_input.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+        stale_threshold = user_input.get(CONF_STALE_THRESHOLD, DEFAULT_STALE_THRESHOLD_MINUTES)
 
         try:
-            # Check if station is already configured (case-insensitive)
+            # Check if primary station is already configured
             await self.async_set_unique_id(station_code)
             self._abort_if_unique_id_configured()
 
@@ -162,8 +191,13 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 {
                     CONF_STATION_CODE: station_code,
                     CONF_API_KEY: api_key,
+                    CONF_FALLBACK_STATION_CODE: fallback_station_code,
                 },
             )
+        except SameStation:
+            errors["fallback_station_code"] = "same_station"
+        except FallbackStationNotFound:
+            errors["fallback_station_code"] = "fallback_station_not_found"
         except StationNotFound:
             errors["station_code"] = "station_not_found"
         except InvalidAuth:
@@ -182,10 +216,15 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_STATION_CODE: station_code,
                 CONF_API_KEY: api_key,
             }
+            options = {
+                CONF_SCAN_INTERVAL: scan_interval,
+                CONF_FALLBACK_STATION_CODE: fallback_station_code,
+                CONF_STALE_THRESHOLD: stale_threshold,
+            }
             return self.async_create_entry(
                 title=info["title"],
                 data=clean_data,
-                options={CONF_SCAN_INTERVAL: scan_interval},
+                options=options,
             )
 
         return self.async_show_form(
@@ -210,16 +249,51 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Manage the options."""
+        errors = {}
+
         if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+            fallback_station_code = user_input.get(CONF_FALLBACK_STATION_CODE, "").strip().lower()
+            primary_station = self.config_entry.data.get(CONF_STATION_CODE, "").strip().lower()
+            api_key = self.config_entry.data.get(CONF_API_KEY, "").strip()
+
+            if fallback_station_code:
+                if fallback_station_code == primary_station:
+                    errors["fallback_station_code"] = "same_station"
+                else:
+                    hub = MeteonetworkHub(self.hass)
+                    res = await hub.authenticate(api_key, fallback_station_code)
+                    if not res["success"]:
+                        errors["fallback_station_code"] = "fallback_station_not_found"
+
+            if not errors:
+                clean_options = {
+                    CONF_SCAN_INTERVAL: user_input.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
+                    CONF_FALLBACK_STATION_CODE: fallback_station_code,
+                    CONF_STALE_THRESHOLD: user_input.get(
+                        CONF_STALE_THRESHOLD, DEFAULT_STALE_THRESHOLD_MINUTES
+                    ),
+                }
+                return self.async_create_entry(title="", data=clean_options)
 
         current_scan_interval = self.config_entry.options.get(
             CONF_SCAN_INTERVAL,
             self.config_entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
         )
+        current_fallback = self.config_entry.options.get(
+            CONF_FALLBACK_STATION_CODE,
+            self.config_entry.data.get(CONF_FALLBACK_STATION_CODE, ""),
+        )
+        current_stale_threshold = self.config_entry.options.get(
+            CONF_STALE_THRESHOLD,
+            self.config_entry.data.get(CONF_STALE_THRESHOLD, DEFAULT_STALE_THRESHOLD_MINUTES),
+        )
 
         options_schema = vol.Schema(
             {
+                vol.Optional(
+                    CONF_FALLBACK_STATION_CODE,
+                    default=current_fallback,
+                ): str,
                 vol.Optional(
                     CONF_SCAN_INTERVAL,
                     default=current_scan_interval,
@@ -232,12 +306,25 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         mode=NumberSelectorMode.BOX,
                     )
                 ),
+                vol.Optional(
+                    CONF_STALE_THRESHOLD,
+                    default=current_stale_threshold,
+                ): NumberSelector(
+                    NumberSelectorConfig(
+                        min=MIN_STALE_THRESHOLD_MINUTES,
+                        max=MAX_STALE_THRESHOLD_MINUTES,
+                        step=5,
+                        unit_of_measurement="min",
+                        mode=NumberSelectorMode.BOX,
+                    )
+                ),
             }
         )
 
         return self.async_show_form(
             step_id="init",
             data_schema=options_schema,
+            errors=errors,
         )
 
 
@@ -259,3 +346,11 @@ class InvalidAuth(HomeAssistantError):
 
 class StationNotFound(HomeAssistantError):
     """Error to indicate the station was not found."""
+
+
+class FallbackStationNotFound(HomeAssistantError):
+    """Error to indicate the fallback station was not found."""
+
+
+class SameStation(HomeAssistantError):
+    """Error to indicate fallback station is identical to primary station."""

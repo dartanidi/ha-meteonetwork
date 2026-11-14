@@ -3,23 +3,29 @@
     "step": {
       "user": {
         "title": "Configura Meteonetwork",
-        "description": "Inserisci le credenziali per la tua stazione Meteonetwork.",
+        "description": "Inserisci le credenziali per la tua stazione Meteonetwork e, se desideri, una stazione di riserva (fallback).",
         "data": {
-          "station_code": "Codice Stazione",
+          "station_code": "Codice Stazione Principale",
           "api_key": "Token API",
-          "scan_interval": "Intervallo di Polling"
+          "fallback_station_code": "Codice Stazione di Fallback (Opzionale)",
+          "scan_interval": "Intervallo di Polling",
+          "stale_threshold": "Soglia Dati Obsoleti (minuti)"
         },
         "data_description": {
-          "station_code": "Il codice identificativo della tua stazione Meteonetwork (es. lmb015)",
+          "station_code": "Il codice identificativo della stazione principale (es. lmb015)",
           "api_key": "Il token API personale fornito da Meteonetwork",
-          "scan_interval": "Frequenza di aggiornamento dei dati in minuti (1-60)"
+          "fallback_station_code": "Stazione di riserva a cui attingere se la principale è offline o non aggiornata",
+          "scan_interval": "Frequenza di aggiornamento dei dati in minuti (1-60)",
+          "stale_threshold": "Minuti di mancato aggiornamento dopo i quali la stazione principale è considerata offline (15-360)"
         }
       }
     },
     "error": {
       "cannot_connect": "Impossibile connettersi all'API Meteonetwork. Verifica la connessione internet.",
       "invalid_auth": "Token API non valido. Verifica le tue credenziali.",
-      "station_not_found": "Codice stazione non trovato. Verifica il codice inserito.",
+      "station_not_found": "Codice stazione principale non trovato. Verifica il codice inserito.",
+      "fallback_station_not_found": "Codice stazione di fallback non trovato. Verifica il codice inserito.",
+      "same_station": "La stazione di fallback non può coincidere con la stazione principale.",
       "timeout": "Timeout durante la connessione all'API Meteonetwork.",
       "no_data": "La stazione non ha restituito dati validi.",
       "unknown": "Errore imprevisto durante la configurazione."
@@ -32,14 +38,22 @@
     "step": {
       "init": {
         "title": "Opzioni Meteonetwork",
-        "description": "Modifica l'intervallo di aggiornamento della stazione.",
+        "description": "Modifica l'intervallo di aggiornamento e la stazione di fallback.",
         "data": {
-          "scan_interval": "Intervallo di Polling"
+          "fallback_station_code": "Codice Stazione di Fallback",
+          "scan_interval": "Intervallo di Polling",
+          "stale_threshold": "Soglia Dati Obsoleti (minuti)"
         },
         "data_description": {
-          "scan_interval": "Frequenza di aggiornamento dei dati in minuti (1-60)."
+          "fallback_station_code": "Codice della stazione di riserva (lascia vuoto per disabilitare il fallback).",
+          "scan_interval": "Frequenza di aggiornamento dei dati in minuti (1-60).",
+          "stale_threshold": "Minuti di mancato aggiornamento dopo i quali la principale è considerata offline (15-360)."
         }
       }
+    },
+    "error": {
+      "fallback_station_not_found": "Codice stazione di fallback non trovato. Verifica il codice inserito.",
+      "same_station": "La stazione di fallback non può coincidere con la stazione principale."
     }
   }
 }
