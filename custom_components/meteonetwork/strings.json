@@ -26,6 +26,7 @@
       "station_not_found": "Codice stazione principale non trovato. Verifica il codice inserito.",
       "fallback_station_not_found": "Codice stazione di fallback non trovato. Verifica il codice inserito.",
       "same_station": "La stazione di fallback non può coincidere con la stazione principale.",
+      "rate_limited": "Troppe richieste alle API Meteonetwork (limite di 1 richiesta/sec). Attendi qualche secondo e riprova.",
       "timeout": "Timeout durante la connessione all'API Meteonetwork.",
       "no_data": "La stazione non ha restituito dati validi.",
       "unknown": "Errore imprevisto durante la configurazione."
@@ -53,7 +54,8 @@
     },
     "error": {
       "fallback_station_not_found": "Codice stazione di fallback non trovato. Verifica il codice inserito.",
-      "same_station": "La stazione di fallback non può coincidere con la stazione principale."
+      "same_station": "La stazione di fallback non può coincidere con la stazione principale.",
+      "rate_limited": "Troppe richieste alle API Meteonetwork (limite di 1 richiesta/sec). Attendi qualche secondo e riprova."
     }
   }
 }

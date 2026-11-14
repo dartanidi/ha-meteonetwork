@@ -1,4 +1,4 @@
-"""DataUpdateCoordinator for Meteonetwork integration with fallback support."""
+"""DataUpdateCoordinator for Meteonetwork integration with fallback support and rate-limit handling."""
 from __future__ import annotations
 
 import asyncio
@@ -82,8 +82,10 @@ class MeteonetworkDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return False
         return bool(self.data.get("is_fallback", False))
 
-    async def _async_fetch_station_data(self, station_code: str) -> dict[str, Any] | None:
-        """Fetch and parse data for a specific station from the API."""
+    async def _async_fetch_station_data(
+        self, station_code: str, retry_on_429: bool = True
+    ) -> dict[str, Any] | None:
+        """Fetch and parse data for a specific station from the API with 429 throttling."""
         url = f"{API_BASE_URL}/{station_code}"
         headers = {
             "Content-Type": "application/json",
@@ -94,6 +96,30 @@ class MeteonetworkDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             async with self.session.get(url, headers=headers) as response:
                 if response.status == 401:
                     raise ConfigEntryAuthFailed("Invalid API key")
+
+                if response.status == 404:
+                    _LOGGER.warning("Meteonetwork station %s not found (HTTP 404)", station_code)
+                    return None
+
+                if response.status == 429:
+                    if retry_on_429:
+                        retry_after = 2
+                        try:
+                            retry_after = max(int(response.headers.get("Retry-After", 2)), 2)
+                        except (ValueError, TypeError):
+                            retry_after = 2
+                        _LOGGER.warning(
+                            "Rate limit Meteonetwork (HTTP 429) per stazione %s. Attesa di %s secondi...",
+                            station_code,
+                            retry_after,
+                        )
+                        await asyncio.sleep(retry_after)
+                        return await self._async_fetch_station_data(station_code, retry_on_429=False)
+
+                    _LOGGER.warning(
+                        "Rate limit Meteonetwork (HTTP 429) persistente per stazione %s.", station_code
+                    )
+                    return None
 
                 if response.status != 200:
                     _LOGGER.warning(
@@ -196,6 +222,9 @@ class MeteonetworkDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         # 2. Primary is offline, stale, or errored -> try fallback station if configured
         if self.fallback_station_code:
+            # Respect Meteonetwork rate limit (max 1 req/sec) before querying fallback station
+            await asyncio.sleep(1.5)
+
             _LOGGER.warning(
                 "Primary station %s is offline or stale. Switching to fallback station %s",
                 self.station_code,

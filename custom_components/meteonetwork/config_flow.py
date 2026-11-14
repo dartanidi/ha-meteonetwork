@@ -77,8 +77,10 @@ class MeteonetworkHub:
         """Initialize."""
         self.hass = hass
 
-    async def authenticate(self, api_key: str, station_code: str) -> dict[str, Any]:
-        """Test authentication with the Meteonetwork API."""
+    async def authenticate(
+        self, api_key: str, station_code: str, retry_on_429: bool = True
+    ) -> dict[str, Any]:
+        """Test authentication with the Meteonetwork API with automatic 429 throttling."""
         try:
             session = async_get_clientsession(self.hass)
             url = f"{API_BASE_URL}/{station_code}"
@@ -104,10 +106,29 @@ class MeteonetworkHub:
                             }
                         _LOGGER.warning("API returned empty or invalid data: %s", data)
                         return {"success": False, "error": "no_data"}
+
                     if response.status == 401:
                         return {"success": False, "error": "invalid_auth"}
+
                     if response.status == 404:
                         return {"success": False, "error": "station_not_found"}
+
+                    if response.status == 429:
+                        if retry_on_429:
+                            retry_after = 2
+                            try:
+                                retry_after = max(int(response.headers.get("Retry-After", 2)), 2)
+                            except (ValueError, TypeError):
+                                retry_after = 2
+                            _LOGGER.warning(
+                                "Rate limit Meteonetwork raggiunto (HTTP 429). Attesa di %s secondi prima di ritentare...",
+                                retry_after,
+                            )
+                            await asyncio.sleep(retry_after)
+                            return await self.authenticate(api_key, station_code, retry_on_429=False)
+
+                        _LOGGER.warning("Rate limit Meteonetwork (HTTP 429) persistente.")
+                        return {"success": False, "error": "rate_limited"}
 
                     _LOGGER.warning("API returned status %s", response.status)
                     return {"success": False, "error": "cannot_connect"}
@@ -144,12 +165,17 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
             raise TimeoutConnect
         if result["error"] == "no_data":
             raise NoData
+        if result["error"] == "rate_limited":
+            raise RateLimited
         raise CannotConnect("Impossibile connettersi all'API Meteonetwork")
 
-    # If fallback station was specified, validate it too
+    # If fallback station was specified, pause 1.5s to respect the 1 req/sec rate limit
     if fallback_station_code:
+        await asyncio.sleep(1.5)
         fallback_res = await hub.authenticate(api_key, fallback_station_code)
         if not fallback_res["success"]:
+            if fallback_res.get("error") == "rate_limited":
+                raise RateLimited
             raise FallbackStationNotFound
 
     return {
@@ -206,6 +232,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors["base"] = "timeout"
         except NoData:
             errors["base"] = "no_data"
+        except RateLimited:
+            errors["base"] = "rate_limited"
         except CannotConnect:
             errors["base"] = "cannot_connect"
         except Exception:  # pylint: disable=broad-except
@@ -263,7 +291,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     hub = MeteonetworkHub(self.hass)
                     res = await hub.authenticate(api_key, fallback_station_code)
                     if not res["success"]:
-                        errors["fallback_station_code"] = "fallback_station_not_found"
+                        if res.get("error") == "rate_limited":
+                            errors["base"] = "rate_limited"
+                        else:
+                            errors["fallback_station_code"] = "fallback_station_not_found"
 
             if not errors:
                 clean_options = {
@@ -338,6 +369,10 @@ class TimeoutConnect(HomeAssistantError):
 
 class NoData(HomeAssistantError):
     """Error to indicate API returned no data."""
+
+
+class RateLimited(HomeAssistantError):
+    """Error to indicate API rate limit (HTTP 429) was reached."""
 
 
 class InvalidAuth(HomeAssistantError):

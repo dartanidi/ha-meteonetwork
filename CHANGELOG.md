@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-11-14
+
+### Fixed
+- **API Rate Limiting (HTTP 429)**: added automatic throttling and retry logic respecting Meteonetwork's strict policy of 1 request per second.
+- Added an automatic 1.5-second pause between primary and fallback station queries in both Config Flow and Coordinator.
+- Added dedicated `rate_limited` user-facing error message in the configuration and options forms.
+
+---
+
 ## [1.3.0] - 2026-11-14
 
 ### Added
