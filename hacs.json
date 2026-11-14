@@ -1,10 +1,8 @@
 {
-"name": "Meteonetwork",
-"content_in_root": false,
-"filename": "meteonetwork",
-"country": ["IT"],
-"domains": ["sensor"],
-"iot_class": "cloud_polling",
-"render_readme": true,
-"hide_default_branch": true
+  "name": "Meteonetwork",
+  "content_in_root": false,
+  "country": ["IT"],
+  "render_readme": true,
+  "hide_default_branch": true,
+  "homeassistant": "2024.1.0"
 }

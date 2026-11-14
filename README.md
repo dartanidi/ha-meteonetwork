@@ -10,41 +10,50 @@ A Home Assistant custom component to integrate Meteonetwork weather stations.
 
 - ⭐ Real-time weather data from your Meteonetwork station
 - 🌡️ Temperature, humidity, pressure sensors
-- 💨 Wind speed, direction, and gusts
-- 🌧️ Rain data (daily total and current rate)
+- 💨 Wind speed, cardinal direction, and gusts
+- 🌧️ Rain data (daily total and current precipitation rate)
 - ⚙️ Configurable polling interval (1-60 minutes)
 - 🎛️ Easy setup through Home Assistant UI
-- 🔄 Automatic updates via HACS
+- 🔄 Automatic updates via Home Assistant Marketplace / HACS
 
 ## Installation
 
-### HACS (Recommended)
+### Marketplace / HACS (Recommended)
 
-1. Open HACS in Home Assistant
-2. Go to "Integrations" 
+#### Home Assistant 2026.11+ (Native Marketplace)
+1. In Home Assistant, navigate to **Settings** → **Marketplace**
+2. Click the three dots in the top right corner
+3. Select **Custom repositories**
+4. Add repository URL: `https://github.com/dartanidi/ha-meteonetwork`
+5. Select category: **Integration**
+6. Click **Add**, find **Meteonetwork** and install it
+7. Restart Home Assistant
+
+#### Older Home Assistant versions (HACS)
+1. Open **HACS** in Home Assistant
+2. Go to **Integrations** 
 3. Click the three dots in the top right corner
-4. Select "Custom repositories"
-5. Add this repository URL: `https://github.com/dartanidi/ha-meteonetwork`
-6. Select category "Integration"
-7. Click "Add"
-8. Find "Meteonetwork" in HACS and install it
-9. Restart Home Assistant
+4. Select **Custom repositories**
+5. Add repository URL: `https://github.com/dartanidi/ha-meteonetwork`
+6. Select category: **Integration**
+7. Click **Add**, find **Meteonetwork** and install it
+8. Restart Home Assistant
 
 ### Manual Installation
 
 1. Download the latest release from [GitHub Releases](https://github.com/dartanidi/ha-meteonetwork/releases)
-2. Copy the `meteonetwork` folder to your `custom_components` directory
+2. Copy the `custom_components/meteonetwork` folder to your Home Assistant `custom_components` directory
 3. Restart Home Assistant
 
 ## Configuration
 
 ### Through UI (Recommended)
 
-1. Go to **Configuration** → **Integrations**
+1. Go to **Settings** → **Devices & Services**
 2. Click **Add Integration**
 3. Search for "**Meteonetwork**"
 4. Enter your:
-   - **Station Code** (e.g., "ero123")
+   - **Station Code** (e.g., "lmb015")
    - **API Token** (from your Meteonetwork account)  
    - **Polling Interval** (1-60 minutes, default: 5)
 5. Click **Submit**
@@ -56,7 +65,7 @@ A Home Assistant custom component to integrate Meteonetwork weather stations.
 
 ## Sensors Created
 
-The integration creates these sensors for your station:
+The integration creates these 11 sensors for your station:
 
 | Sensor | Description | Unit |
 |--------|-------------|------|
@@ -64,7 +73,7 @@ The integration creates these sensors for your station:
 | `sensor.meteonetwork_umidita` | Humidity | % |
 | `sensor.meteonetwork_pressione` | Atmospheric pressure | hPa |
 | `sensor.meteonetwork_velocita_vento` | Wind speed | km/h |
-| `sensor.meteonetwork_direzione_vento` | Wind direction | ° |
+| `sensor.meteonetwork_direzione_vento` | Wind direction | Cardinal (e.g. N, SW) |
 | `sensor.meteonetwork_raffiche_vento` | Wind gusts | km/h |
 | `sensor.meteonetwork_temperatura_minima` | Daily minimum temperature | °C |
 | `sensor.meteonetwork_temperatura_massima` | Daily maximum temperature | °C |
@@ -76,14 +85,14 @@ The integration creates these sensors for your station:
 
 You can modify these settings after installation:
 
-- **Polling Interval**: How often to update data (1-60 minutes)
+- **Polling Interval**: How often to update data (1-60 minutes) directly from the integration Options menu.
 
 ## Troubleshooting
 
 ### Integration not appearing
 - Make sure all files are in `custom_components/meteonetwork/`
 - Restart Home Assistant
-- Check logs for errors
+- Check Home Assistant logs for errors
 
 ### Configuration errors
 - Verify your API token is valid
@@ -101,10 +110,6 @@ You can modify these settings after installation:
 - 💡 [Request features](https://github.com/dartanidi/ha-meteonetwork/issues)
 - 💬 [Discussions](https://github.com/dartanidi/ha-meteonetwork/discussions)
 
-## Contributing
-
-Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) first.
-
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
@@ -121,6 +126,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 [commits-shield]: https://img.shields.io/github/commit-activity/y/dartanidi/ha-meteonetwork.svg
 [commits]: https://github.com/dartanidi/ha-meteonetwork/commits/main
 [license-shield]: https://img.shields.io/github/license/dartanidi/ha-meteonetwork.svg
-[maintenance-shield]: https://img.shields.io/badge/maintainer-yourusername-blue.svg
-
----

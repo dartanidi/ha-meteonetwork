@@ -3,16 +3,16 @@
     "step": {
       "user": {
         "title": "Configura Meteonetwork",
-        "description": "Inserisci le credenziali per la tua stazione Meteonetwork.\n\nIntervallo di polling: {scan_interval_range}",
+        "description": "Inserisci le credenziali per la tua stazione Meteonetwork.",
         "data": {
           "station_code": "Codice Stazione",
           "api_key": "Token API",
-          "scan_interval": "Intervallo di Polling (minuti)"
+          "scan_interval": "Intervallo di Polling"
         },
         "data_description": {
-          "station_code": "Il codice identificativo della tua stazione Meteonetwork",
-          "api_key": "Il token API fornito da Meteonetwork per accedere ai dati",
-          "scan_interval": "Frequenza di aggiornamento dei dati in minuti"
+          "station_code": "Il codice identificativo della tua stazione Meteonetwork (es. lmb015)",
+          "api_key": "Il token API personale fornito da Meteonetwork",
+          "scan_interval": "Frequenza di aggiornamento dei dati in minuti (1-60)"
         }
       }
     },
@@ -20,9 +20,9 @@
       "cannot_connect": "Impossibile connettersi all'API Meteonetwork. Verifica la connessione internet.",
       "invalid_auth": "Token API non valido. Verifica le tue credenziali.",
       "station_not_found": "Codice stazione non trovato. Verifica il codice inserito.",
-      "timeout": "Timeout durante la connessione all'API.",
+      "timeout": "Timeout durante la connessione all'API Meteonetwork.",
       "no_data": "La stazione non ha restituito dati validi.",
-      "unknown": "Errore sconosciuto durante la configurazione."
+      "unknown": "Errore imprevisto durante la configurazione."
     },
     "abort": {
       "already_configured": "Questa stazione è già configurata nel sistema."
@@ -32,21 +32,14 @@
     "step": {
       "init": {
         "title": "Opzioni Meteonetwork",
-        "description": "Modifica le impostazioni della tua stazione Meteonetwork.\n\nIntervallo di polling consentito: {scan_interval_range}",
+        "description": "Modifica l'intervallo di aggiornamento della stazione.",
         "data": {
-          "scan_interval": "Intervallo di Polling (minuti)"
+          "scan_interval": "Intervallo di Polling"
         },
         "data_description": {
-          "scan_interval": "Frequenza di aggiornamento dei dati in minuti. Valori bassi potrebbero sovraccaricare l'API."
+          "scan_interval": "Frequenza di aggiornamento dei dati in minuti (1-60)."
         }
       }
-    }
-  },
-  "system_health": {
-    "info": {
-      "api_endpoint_reachable": "API Endpoint raggiungibile",
-      "station_code": "Codice Stazione",
-      "scan_interval": "Intervallo di Polling"
     }
   }
 }

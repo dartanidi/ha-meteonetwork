@@ -6,109 +6,127 @@ import logging
 from typing import Any
 
 import aiohttp
-import async_timeout
 import voluptuous as vol
-
 from homeassistant import config_entries
 from homeassistant.const import CONF_API_KEY, CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.selector import (
+    NumberSelector,
+    NumberSelectorConfig,
+    NumberSelectorMode,
+    TextSelector,
+    TextSelectorConfig,
+    TextSelectorType,
+)
+
+from .const import (
+    API_BASE_URL,
+    API_TIMEOUT,
+    CONF_STATION_CODE,
+    DEFAULT_SCAN_INTERVAL,
+    DOMAIN,
+    MAX_SCAN_INTERVAL,
+    MIN_SCAN_INTERVAL,
+)
 
 _LOGGER = logging.getLogger(__name__)
-
-DOMAIN = "meteonetwork"
-CONF_STATION_CODE = "station_code"
-
-# Default scan interval in minutes
-DEFAULT_SCAN_INTERVAL = 5
-MIN_SCAN_INTERVAL = 1
-MAX_SCAN_INTERVAL = 60
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_STATION_CODE): str,
-        vol.Required(CONF_API_KEY): str,
-        vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): vol.All(
-            vol.Coerce(int), vol.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL)
+        vol.Required(CONF_API_KEY): TextSelector(
+            TextSelectorConfig(type=TextSelectorType.PASSWORD)
+        ),
+        vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): NumberSelector(
+            NumberSelectorConfig(
+                min=MIN_SCAN_INTERVAL,
+                max=MAX_SCAN_INTERVAL,
+                step=1,
+                unit_of_measurement="min",
+                mode=NumberSelectorMode.BOX,
+            )
         ),
     }
 )
 
 
-class PlaceholderHub:
-    """Placeholder class to make tests pass."""
+class MeteonetworkHub:
+    """Client helper for verifying connection during config flow."""
 
     def __init__(self, hass: HomeAssistant) -> None:
         """Initialize."""
         self.hass = hass
 
     async def authenticate(self, api_key: str, station_code: str) -> dict[str, Any]:
-        """Test if we can authenticate with the host."""
+        """Test authentication with the Meteonetwork API."""
         try:
             session = async_get_clientsession(self.hass)
-            url = f"https://api.meteonetwork.it/v3/data-realtime/{station_code}"
+            url = f"{API_BASE_URL}/{station_code}"
             headers = {
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {api_key}",
             }
-            
-            async with async_timeout.timeout(10):
+
+            async with asyncio.timeout(API_TIMEOUT):
                 async with session.get(url, headers=headers) as response:
                     if response.status == 200:
                         data = await response.json()
-                        if isinstance(data, list) and len(data) > 0:
+                        if isinstance(data, list) and len(data) > 0 and isinstance(data[0], dict):
                             station_data = data[0]
                             return {
                                 "success": True,
-                                "station_name": station_data.get("place", f"Stazione {station_code}"),
-                                "latitude": station_data.get("latitude", "N/A"),
-                                "longitude": station_data.get("longitude", "N/A"),
-                                "altitude": station_data.get("altitude", "N/A"),
+                                "station_name": station_data.get(
+                                    "place", f"Stazione {station_code.upper()}"
+                                ),
+                                "latitude": station_data.get("latitude", 0),
+                                "longitude": station_data.get("longitude", 0),
+                                "altitude": station_data.get("altitude", ""),
                             }
-                        else:
-                            _LOGGER.warning(f"API returned empty or invalid data: {data}")
-                            return {"success": False, "error": "no_data"}
-                    elif response.status == 401:
+                        _LOGGER.warning("API returned empty or invalid data: %s", data)
+                        return {"success": False, "error": "no_data"}
+                    if response.status == 401:
                         return {"success": False, "error": "invalid_auth"}
-                    elif response.status == 404:
+                    if response.status == 404:
                         return {"success": False, "error": "station_not_found"}
-                    else:
-                        _LOGGER.warning(f"API returned status {response.status}")
-                        return {"success": False, "error": "cannot_connect"}
-        except async_timeout.TimeoutError:
+
+                    _LOGGER.warning("API returned status %s", response.status)
+                    return {"success": False, "error": "cannot_connect"}
+
+        except asyncio.TimeoutError:
             _LOGGER.warning("Timeout connecting to Meteonetwork API")
             return {"success": False, "error": "timeout"}
         except aiohttp.ClientError as err:
-            _LOGGER.warning(f"Client error: {err}")
+            _LOGGER.warning("Client error connecting to Meteonetwork API: %s", err)
             return {"success": False, "error": "cannot_connect"}
         except Exception as err:
-            _LOGGER.exception(f"Unexpected exception during authentication: {err}")
+            _LOGGER.exception("Unexpected exception during Meteonetwork authentication: %s", err)
             return {"success": False, "error": "unknown"}
 
 
 async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
-    """Validate the user input allows us to connect."""
+    """Validate user input by authenticating against the API."""
+    hub = MeteonetworkHub(hass)
+    station_code = data[CONF_STATION_CODE].strip().lower()
+    api_key = data[CONF_API_KEY].strip()
 
-    hub = PlaceholderHub(hass)
-    result = await hub.authenticate(data[CONF_API_KEY], data[CONF_STATION_CODE])
-    
+    result = await hub.authenticate(api_key, station_code)
+
     if not result["success"]:
         if result["error"] == "invalid_auth":
             raise InvalidAuth
-        elif result["error"] == "station_not_found":
+        if result["error"] == "station_not_found":
             raise StationNotFound
-        elif result["error"] == "timeout":
-            raise CannotConnect("Timeout durante la connessione")
-        elif result["error"] == "no_data":
-            raise CannotConnect("La stazione non ha restituito dati")
-        else:
-            raise CannotConnect("Impossibile connettersi all'API")
+        if result["error"] == "timeout":
+            raise TimeoutConnect
+        if result["error"] == "no_data":
+            raise NoData
+        raise CannotConnect("Impossibile connettersi all'API Meteonetwork")
 
-    # Return info that you want to store in the config entry.
     return {
-        "title": f"{result['station_name']} ({data[CONF_STATION_CODE]})",
+        "title": f"{result['station_name']} ({station_code.upper()})",
         "station_info": result,
     }
 
@@ -121,43 +139,59 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Handle the initial step."""
+        """Handle the initial user step."""
         if user_input is None:
             return self.async_show_form(
-                step_id="user", 
+                step_id="user",
                 data_schema=STEP_USER_DATA_SCHEMA,
-                description_placeholders={
-                    "scan_interval_range": f"{MIN_SCAN_INTERVAL}-{MAX_SCAN_INTERVAL} minuti"
-                }
             )
 
         errors = {}
 
+        station_code = user_input[CONF_STATION_CODE].strip().lower()
+        api_key = user_input[CONF_API_KEY].strip()
+        scan_interval = user_input.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+
         try:
-            # Check if the station is already configured
-            await self.async_set_unique_id(user_input[CONF_STATION_CODE])
+            # Check if station is already configured (case-insensitive)
+            await self.async_set_unique_id(station_code)
             self._abort_if_unique_id_configured()
-            
-            info = await validate_input(self.hass, user_input)
+
+            info = await validate_input(
+                self.hass,
+                {
+                    CONF_STATION_CODE: station_code,
+                    CONF_API_KEY: api_key,
+                },
+            )
         except StationNotFound:
             errors["station_code"] = "station_not_found"
-        except CannotConnect:
-            errors["base"] = "cannot_connect"
         except InvalidAuth:
             errors["api_key"] = "invalid_auth"
+        except TimeoutConnect:
+            errors["base"] = "timeout"
+        except NoData:
+            errors["base"] = "no_data"
+        except CannotConnect:
+            errors["base"] = "cannot_connect"
         except Exception:  # pylint: disable=broad-except
-            _LOGGER.exception("Unexpected exception")
+            _LOGGER.exception("Unexpected exception in config flow")
             errors["base"] = "unknown"
         else:
-            return self.async_create_entry(title=info["title"], data=user_input)
+            clean_data = {
+                CONF_STATION_CODE: station_code,
+                CONF_API_KEY: api_key,
+            }
+            return self.async_create_entry(
+                title=info["title"],
+                data=clean_data,
+                options={CONF_SCAN_INTERVAL: scan_interval},
+            )
 
         return self.async_show_form(
-            step_id="user", 
-            data_schema=STEP_USER_DATA_SCHEMA, 
+            step_id="user",
+            data_schema=STEP_USER_DATA_SCHEMA,
             errors=errors,
-            description_placeholders={
-                "scan_interval_range": f"{MIN_SCAN_INTERVAL}-{MAX_SCAN_INTERVAL} minuti"
-            }
         )
 
     @staticmethod
@@ -166,16 +200,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         config_entry: config_entries.ConfigEntry,
     ) -> config_entries.OptionsFlow:
         """Create the options flow."""
-        return OptionsFlowHandler(config_entry)
+        return OptionsFlowHandler()
 
 
 class OptionsFlowHandler(config_entries.OptionsFlow):
     """Handle options flow for Meteonetwork."""
-
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        """Initialize options flow."""
-        # Don't store config_entry explicitly - it's deprecated
-        pass
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
@@ -184,32 +213,44 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
+        current_scan_interval = self.config_entry.options.get(
+            CONF_SCAN_INTERVAL,
+            self.config_entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
+        )
+
         options_schema = vol.Schema(
             {
                 vol.Optional(
                     CONF_SCAN_INTERVAL,
-                    default=self.config_entry.options.get(
-                        CONF_SCAN_INTERVAL,
-                        self.config_entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
-                    ),
-                ): vol.All(
-                    vol.Coerce(int), 
-                    vol.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL)
+                    default=current_scan_interval,
+                ): NumberSelector(
+                    NumberSelectorConfig(
+                        min=MIN_SCAN_INTERVAL,
+                        max=MAX_SCAN_INTERVAL,
+                        step=1,
+                        unit_of_measurement="min",
+                        mode=NumberSelectorMode.BOX,
+                    )
                 ),
             }
         )
 
         return self.async_show_form(
-            step_id="init", 
+            step_id="init",
             data_schema=options_schema,
-            description_placeholders={
-                "scan_interval_range": f"{MIN_SCAN_INTERVAL}-{MAX_SCAN_INTERVAL} minuti"
-            }
         )
 
 
 class CannotConnect(HomeAssistantError):
     """Error to indicate we cannot connect."""
+
+
+class TimeoutConnect(HomeAssistantError):
+    """Error to indicate connection timed out."""
+
+
+class NoData(HomeAssistantError):
+    """Error to indicate API returned no data."""
 
 
 class InvalidAuth(HomeAssistantError):
