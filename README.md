@@ -122,6 +122,7 @@ You can modify these settings anytime after installation from **Settings** → *
 - 🐛 [Report bugs](https://github.com/dartanidi/ha-meteonetwork/issues)
 - 💡 [Request features](https://github.com/dartanidi/ha-meteonetwork/issues)
 - 💬 [Discussions](https://github.com/dartanidi/ha-meteonetwork/discussions)
+- 📝 [Changelog](CHANGELOG.md)
 
 ## License
 
