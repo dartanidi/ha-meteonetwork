@@ -48,6 +48,7 @@ class MeteonetworkFallbackBinarySensor(
         self._attr_has_entity_name = True
         self._attr_name = "Fallback Attivo"
         self._attr_suggested_object_id = "meteonetwork_fallback_attivo"
+        self.entity_id = "binary_sensor.meteonetwork_fallback_attivo"
         self._attr_unique_id = f"{entry.data[CONF_STATION_CODE]}_fallback_active"
         self._attr_device_class = BinarySensorDeviceClass.PROBLEM
         self._attr_icon = "mdi:swap-horizontal"
@@ -59,11 +60,12 @@ class MeteonetworkFallbackBinarySensor(
         if self.coordinator.data and isinstance(self.coordinator.data, dict):
             station_name = self.coordinator.data.get("place", "Unknown")
 
+        station_code = self._entry.data[CONF_STATION_CODE].upper()
         return DeviceInfo(
             identifiers={(DOMAIN, self._entry.data[CONF_STATION_CODE])},
-            name=f"Stazione Meteonetwork {station_name}",
+            name="Meteonetwork",
             manufacturer="Meteonetwork",
-            model="Weather Station",
+            model=f"Stazione {station_name} ({station_code})",
             configuration_url="https://www.meteonetwork.it/rete/livemap/",
         )
 

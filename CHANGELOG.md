@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2] - 2026-11-14
+
+### Fixed
+- **Clean Entity ID Generation**: Fixed entity IDs prefixing the long device name (e.g. `sensor.stazione_meteonetwork_jolanda_di_savoia_direzione_vento`). Device name is now set to `"Meteonetwork"` (with station name and code cleanly placed in the device model field), and explicit `self.entity_id` is assigned at creation, guaranteeing standard entity IDs such as `sensor.meteonetwork_direzione_vento`, `sensor.meteonetwork_temperatura`, etc.
+
+---
+
 ## [1.3.1] - 2026-11-14
 
 ### Fixed

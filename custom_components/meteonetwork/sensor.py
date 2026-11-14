@@ -146,11 +146,12 @@ class MeteonetworkSensor(CoordinatorEntity[MeteonetworkDataUpdateCoordinator], S
         self._sensor_config = SENSOR_TYPES[sensor_type]
         self._entry = entry
 
-        # Denominazione moderna: has_entity_name=True per UI pulita su scheda dispositivo,
-        # e suggested_object_id per garantire entity_id tipo sensor.meteonetwork_temperatura
+        # Impostazione nome e ID entità rigoroso: sensor.meteonetwork_<nome>
+        slug = slugify(self._sensor_config["name"])
         self._attr_has_entity_name = True
         self._attr_name = self._sensor_config["name"]
-        self._attr_suggested_object_id = f"meteonetwork_{slugify(self._sensor_config['name'])}"
+        self._attr_suggested_object_id = f"meteonetwork_{slug}"
+        self.entity_id = f"sensor.meteonetwork_{slug}"
 
         self._attr_unique_id = f"{entry.data[CONF_STATION_CODE]}_{sensor_type}"
         self._attr_device_class = self._sensor_config.get("device_class")
@@ -165,11 +166,12 @@ class MeteonetworkSensor(CoordinatorEntity[MeteonetworkDataUpdateCoordinator], S
         if self.coordinator.data and isinstance(self.coordinator.data, dict):
             station_name = self.coordinator.data.get("place", "Unknown")
 
+        station_code = self._entry.data[CONF_STATION_CODE].upper()
         return DeviceInfo(
             identifiers={(DOMAIN, self._entry.data[CONF_STATION_CODE])},
-            name=f"Stazione Meteonetwork {station_name}",
+            name="Meteonetwork",
             manufacturer="Meteonetwork",
-            model="Weather Station",
+            model=f"Stazione {station_name} ({station_code})",
             configuration_url="https://www.meteonetwork.it/rete/livemap/",
         )
 
@@ -208,6 +210,7 @@ class MeteonetworkActiveStationSensor(CoordinatorEntity[MeteonetworkDataUpdateCo
         self._attr_has_entity_name = True
         self._attr_name = "Stazione Attiva"
         self._attr_suggested_object_id = "meteonetwork_stazione_attiva"
+        self.entity_id = "sensor.meteonetwork_stazione_attiva"
         self._attr_unique_id = f"{entry.data[CONF_STATION_CODE]}_active_station"
         self._attr_icon = "mdi:broadcast"
 
@@ -218,11 +221,12 @@ class MeteonetworkActiveStationSensor(CoordinatorEntity[MeteonetworkDataUpdateCo
         if self.coordinator.data and isinstance(self.coordinator.data, dict):
             station_name = self.coordinator.data.get("place", "Unknown")
 
+        station_code = self._entry.data[CONF_STATION_CODE].upper()
         return DeviceInfo(
             identifiers={(DOMAIN, self._entry.data[CONF_STATION_CODE])},
-            name=f"Stazione Meteonetwork {station_name}",
+            name="Meteonetwork",
             manufacturer="Meteonetwork",
-            model="Weather Station",
+            model=f"Stazione {station_name} ({station_code})",
             configuration_url="https://www.meteonetwork.it/rete/livemap/",
         )
 
